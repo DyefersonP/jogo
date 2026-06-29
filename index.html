@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Fuja do Chuveiro 🚿</title>
+<style>
+  :root{
+    --azulejo-1: #eef6f8;
+    --azulejo-2: #dcedf1;
+    --rejunte: #c7dde2;
+    --vapor: rgba(255,255,255,0.55);
+    --azul-agua: #4fb6d6;
+    --azul-agua-escuro: #2c8aa8;
+    --texto: #1f3a44;
+    --acento: #ff7a59;
+    --painel: #ffffffee;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; height:100%; overflow:hidden;
+    font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+    color: var(--texto);
+    background:
+      repeating-linear-gradient(0deg, var(--rejunte) 0 2px, transparent 2px 64px),
+      repeating-linear-gradient(90deg, var(--rejunte) 0 2px, transparent 2px 64px),
+      linear-gradient(180deg, var(--azulejo-1), var(--azulejo-2));
+    touch-action: none;
+  }
+
+  #cena{
+    position:relative;
+    width:100%; height:100%;
+    overflow:hidden;
+  }
+
+  #hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 14px 20px;
+    z-index: 10;
+    pointer-events:none;
+  }
+  #titulo{
+    font-size: 1.1rem;
+    font-weight:800;
+    letter-spacing: .5px;
+    color: var(--azul-agua-escuro);
+    text-shadow: 0 1px 0 #fff;
+  }
+  #placar{
+    background: var(--painel);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-weight:700;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  #vidas{
+    font-size:1.2rem;
+    letter-spacing:4px;
+  }
+
+  #chuveiro{
+    position:absolute;
+    top: 18px;
+    left:50%;
+    transform: translateX(-50%);
+    width: 180px;
+    z-index: 5;
+  }
+  #cabecote{
+    width:180px; height:34px;
+    background: linear-gradient(180deg,#cfd8dc,#90a4ae);
+    border-radius: 0 0 90px 90px;
+    box-shadow: inset 0 -4px 6px rgba(0,0,0,0.2);
+  }
+  #cano{
+    width:14px; height:60px;
+    background: linear-gradient(90deg,#b0bec5,#78909c);
+    margin: 0 auto;
+    border-radius: 4px;
+  }
+
+  .gota{
+    position:absolute;
+    width:8px; height:18px;
+    border-radius: 0 0 50% 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.8), var(--azul-agua));
+    top: 90px;
+    z-index: 4;
+    pointer-events:none;
+  }
+
+  .vapor-fx{
+    position:absolute;
+    border-radius:50%;
+    background: var(--vapor);
+    filter: blur(2px);
+    animation: subir 4s linear forwards;
+    pointer-events:none;
+    z-index: 3;
+  }
+  @keyframes subir{
+    from{ opacity:.6; transform: translateY(0) scale(1); }
+    to{ opacity:0; transform: translateY(-220px) scale(1.6); }
+  }
+
+  #chao{
+    position:absolute; bottom:0; left:0; right:0;
+    height: 130px;
+    z-index: 2;
+  }
+
+  #personagem{
+    position:absolute;
+    bottom: 36px;
+    width: 96px;
+    height: 96px;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 64px;
+    user-select:none;
+    transition: filter .15s ease;
+    will-change: left;
+  }
+  /*
+    ====================================================================
+    PARA TROCAR PELA SUA FOTO (no VS Code):
+    1) Apague a linha <div id="emoji-placeholder">🙆‍♀️</div> abaixo
+    2) Coloque sua foto na mesma pasta do index.html, ex: minha-foto.jpg
+    3) Troque o conteúdo de #personagem por:
+         <img src="minha-foto.jpg" style="width:100%;height:100%;
+              object-fit:cover;border-radius:50%;border:4px solid #fff;
+              box-shadow:0 6px 14px rgba(0,0,0,.25)">
+    ====================================================================
+  */
+  #personagem.atingida{ filter: drop-shadow(0 0 0 transparent) brightness(0.7) saturate(1.6); }
+
+  #sombra-personagem{
+    position:absolute;
+    bottom: 30px;
+    width: 70px; height: 14px;
+    background: rgba(0,0,0,0.18);
+    border-radius: 50%;
+    filter: blur(1px);
+    z-index:1;
+  }
+
+  .tela{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background: rgba(20,40,46,0.55);
+    backdrop-filter: blur(2px);
+    z-index: 20;
+  }
+  .cartao{
+    background: var(--painel);
+    border-radius: 24px;
+    padding: 32px 28px;
+    max-width: 320px;
+    text-align:center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+  }
+  .cartao h1{ margin:0 0 6px; font-size:1.4rem; color: var(--azul-agua-escuro);}
+  .cartao p{ margin: 8px 0 18px; line-height:1.5; font-size:.95rem; }
+  .btn{
+    background: var(--acento);
+    color:#fff; border:none;
+    font-weight:800; font-size:1rem;
+    padding: 14px 28px;
+    border-radius: 999px;
+    cursor:pointer;
+    box-shadow: 0 6px 14px rgba(255,122,89,.4);
+    transition: transform .1s ease;
+  }
+  .btn:active{ transform: scale(0.95); }
+  .escondido{ display:none !important; }
+
+  #controles{
+    position:absolute; bottom:18px; left:0; right:0;
+    display:flex; justify-content:space-between;
+    padding: 0 22px;
+    z-index: 15;
+  }
+  .ctrl-btn{
+    width:64px; height:64px;
+    border-radius:50%;
+    background: var(--painel);
+    border: none;
+    font-size: 1.6rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    color: var(--azul-agua-escuro);
+    user-select:none;
+  }
+  .ctrl-btn:active{ background:#fff; transform: scale(0.92); }
+
+  @media (min-width: 700px){
+    #controles{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="cena">
+
+  <div id="hud">
+    <div id="titulo">FUJA DO CHUVEIRO 🚿</div>
+    <div id="placar">⏱ <span id="tempo">0</span>s &nbsp; <span id="vidas">❤️❤️❤️</span></div>
+  </div>
+
+  <div id="chuveiro">
+    <div id="cano"></div>
+    <div id="cabecote"></div>
+  </div>
+
+  <div id="chao">
+    <div id="sombra-personagem"></div>
+    <div id="personagem">
+      <div id="emoji-placeholder"><img src="img/WhatsApp_Image_2026-06-29_at_12.33.27-removebg-preview.png" alt=""></div>
+    </div>
+  </div>
+
+  <div id="controles">
+    <button class="ctrl-btn" id="btn-esq">◀</button>
+    <button class="ctrl-btn" id="btn-dir">▶</button>
+  </div>
+
+  <div class="tela" id="tela-inicio">
+    <div class="cartao">
+      <h1>Fuja do Chuveiro 🚿</h1>
+      <p>O chuveiro está pingando! Use as <b>setas ◀ ▶</b> (ou os botões na tela) pra desviar das gotas e não tomar banho. Você tem 3 chances ❤️❤️❤️.</p>
+      <button class="btn" id="btn-iniciar">Começar a fugir!</button>
+    </div>
+  </div>
+
+  <div class="tela escondido" id="tela-fim">
+    <div class="cartao">
+      <h1 id="titulo-fim">Ela tomou banho! 🛁</h1>
+      <p id="texto-fim">Você fugiu por <b><span id="tempo-final">0</span> segundos</b>.</p>
+      <button class="btn" id="btn-reiniciar">Tentar de novo</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const cena = document.getElementById('cena');
+  const personagem = document.getElementById('personagem');
+  const sombra = document.getElementById('sombra-personagem');
+  const elTempo = document.getElementById('tempo');
+  const elVidas = document.getElementById('vidas');
+  const telaInicio = document.getElementById('tela-inicio');
+  const telaFim = document.getElementById('tela-fim');
+  const tempoFinal = document.getElementById('tempo-final');
+  const btnIniciar = document.getElementById('btn-iniciar');
+  const btnReiniciar = document.getElementById('btn-reiniciar');
+  const btnEsq = document.getElementById('btn-esq');
+  const btnDir = document.getElementById('btn-dir');
+
+  let largura = cena.clientWidth;
+  let altura = cena.clientHeight;
+  const LARGURA_PERSONAGEM = 96;
+
+  let posX = largura/2 - LARGURA_PERSONAGEM/2;
+  let velocidade = 0;
+  const VELOCIDADE_MAX = 9;
+
+  let rodando = false;
+  let vidas = 3;
+  let inicioTempo = 0;
+  let tempoSobrevivido = 0;
+  let gotas = [];
+  let intervaloSpawn = null;
+  let dificuldadeMs = 950;
+  let pausaInvencivel = 0;
+
+  function posicionarPersonagem(){
+    personagem.style.left = posX + 'px';
+    personagem.style.bottom = '36px';
+    sombra.style.left = (posX + LARGURA_PERSONAGEM/2 - 35) + 'px';
+  }
+  posicionarPersonagem();
+
+  window.addEventListener('resize', () => {
+    largura = cena.clientWidth;
+    altura = cena.clientHeight;
+  });
+
+  const teclas = {};
+  window.addEventListener('keydown', (e) => {
+    if(['ArrowLeft','ArrowRight','a','d','A','D'].includes(e.key)) teclas[e.key] = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    teclas[e.key] = false;
+  });
+
+  function segurar(btn){
+    let ativo = false;
+    const inicia = (e) => { e.preventDefault(); ativo = true; };
+    const para = () => { ativo = false; };
+    btn.addEventListener('mousedown', inicia);
+    btn.addEventListener('touchstart', inicia, {passive:false});
+    btn.addEventListener('mouseup', para);
+    btn.addEventListener('mouseleave', para);
+    btn.addEventListener('touchend', para);
+    return () => ativo;
+  }
+  const segurandoEsq = segurar(btnEsq);
+  const segurandoDir = segurar(btnDir);
+
+  function criarVapor(){
+    const v = document.createElement('div');
+    v.className = 'vapor-fx';
+    const tam = 30 + Math.random()*40;
+    v.style.width = tam + 'px';
+    v.style.height = tam + 'px';
+    v.style.left = (largura/2 - 90 + Math.random()*180) + 'px';
+    v.style.top = '70px';
+    cena.appendChild(v);
+    setTimeout(() => v.remove(), 4000);
+  }
+  setInterval(() => { if(rodando) criarVapor(); }, 700);
+
+  function criarGota(){
+    const gota = document.createElement('div');
+    gota.className = 'gota';
+    const x = largura/2 - 90 + Math.random()*180;
+    gota.style.left = x + 'px';
+    gota.style.top = '92px';
+    cena.appendChild(gota);
+
+    const vel = 3.2 + Math.random()*2.4 + Math.min(tempoSobrevivido/12, 4);
+    gotas.push({el: gota, y: 92, x, vel, atingiu:false});
+  }
+
+  function iniciarSpawn(){
+    clearInterval(intervaloSpawn);
+    intervaloSpawn = setInterval(() => {
+      criarGota();
+      dificuldadeMs = Math.max(380, 950 - tempoSobrevivido*12);
+      clearInterval(intervaloSpawn);
+      intervaloSpawn = setInterval(criarGota, dificuldadeMs);
+    }, dificuldadeMs);
+  }
+
+  function limparGotas(){
+    gotas.forEach(g => g.el.remove());
+    gotas = [];
+  }
+
+  let ultimoFrame = null;
+  function loop(t){
+    if(!rodando) return;
+    if(!ultimoFrame) ultimoFrame = t;
+    const dt = (t - ultimoFrame) / 16.6667;
+    ultimoFrame = t;
+
+    const indoEsq = teclas['ArrowLeft'] || teclas['a'] || teclas['A'] || segurandoEsq();
+    const indoDir = teclas['ArrowRight'] || teclas['d'] || teclas['D'] || segurandoDir();
+
+    if(indoEsq && !indoDir) velocidade = Math.max(velocidade - 1.4*dt, -VELOCIDADE_MAX);
+    else if(indoDir && !indoEsq) velocidade = Math.min(velocidade + 1.4*dt, VELOCIDADE_MAX);
+    else velocidade *= 0.82;
+
+    posX += velocidade * dt;
+    posX = Math.max(6, Math.min(largura - LARGURA_PERSONAGEM - 6, posX));
+    posicionarPersonagem();
+
+    const personagemCentroX = posX + LARGURA_PERSONAGEM/2;
+
+    for(let i = gotas.length - 1; i >= 0; i--){
+      const g = gotas[i];
+      g.y += g.vel * dt;
+      g.el.style.top = g.y + 'px';
+
+      if(!g.atingiu && g.y > altura - 200 &&
+         Math.abs(g.x - personagemCentroX) < 40 &&
+         pausaInvencivel <= 0){
+        g.atingiu = true;
+        atingida();
+      }
+
+      if(g.y > altura - 60){
+        g.el.remove();
+        gotas.splice(i,1);
+      }
+    }
+
+    if(pausaInvencivel > 0) pausaInvencivel -= dt;
+
+    tempoSobrevivido = (Date.now() - inicioTempo)/1000;
+    elTempo.textContent = tempoSobrevivido.toFixed(1);
+
+    requestAnimationFrame(loop);
+  }
+
+  function atingida(){
+    vidas -= 1;
+    elVidas.textContent = '❤️'.repeat(Math.max(vidas,0)) + '🤍'.repeat(3-Math.max(vidas,0));
+    personagem.classList.add('atingida');
+    pausaInvencivel = 45;
+    setTimeout(() => personagem.classList.remove('atingida'), 280);
+
+    if(vidas <= 0){
+      fimDeJogo();
+    }
+  }
+
+  function fimDeJogo(){
+    rodando = false;
+    clearInterval(intervaloSpawn);
+    limparGotas();
+    tempoFinal.textContent = tempoSobrevivido.toFixed(1);
+    telaFim.classList.remove('escondido');
+  }
+
+  function iniciarJogo(){
+    largura = cena.clientWidth;
+    altura = cena.clientHeight;
+    posX = largura/2 - LARGURA_PERSONAGEM/2;
+    velocidade = 0;
+    vidas = 3;
+    elVidas.textContent = '❤️❤️❤️';
+    elTempo.textContent = '0';
+    tempoSobrevivido = 0;
+    dificuldadeMs = 950;
+    pausaInvencivel = 0;
+    limparGotas();
+    posicionarPersonagem();
+
+    telaInicio.classList.add('escondido');
+    telaFim.classList.add('escondido');
+
+    inicioTempo = Date.now();
+    rodando = true;
+    ultimoFrame = null;
+    iniciarSpawn();
+    requestAnimationFrame(loop);
+  }
+
+  btnIniciar.addEventListener('click', iniciarJogo);
+  btnReiniciar.addEventListener('click', iniciarJogo);
+
+})();
+</script>
+
+</body>
+</html>
